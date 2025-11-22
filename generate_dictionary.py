@@ -1,7 +1,9 @@
-import nltk #consider: different libary for better wordlist
-from nltk.corpus import words
+from wordfreq import zipf_frequency
+from wordfreq import top_n_list
 
-word_list = words.words()  # list of English words
+words = top_n_list("en", 80000)  # or however big
+word_list = [w for w in words if zipf_frequency(w, "en") >= 2.0]
+
 def get_words(available_letters):
     filtered = []
     for w in word_list:

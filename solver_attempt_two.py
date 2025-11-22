@@ -3,20 +3,15 @@
 
 import random
 from generate_dictionary import get_words
-
-sides = [["d","f","w"],["y","e","u"],["o","c","i"],["a","v","s"]]
+sides = [["e","p","r"],["t","l","i"],["n","x","c"],["a","m","v"]]
 #sides = [["a","b"],["e","r"],["s","t"]]
 flat_sides = [ x for xs in sides for x in xs ]
+
 letters_used = []
 
 #min size of a solution set is 1
-solutions = {}
+solutions = []
 word_list = []
-
-available_words = []
-
-max_used = 0
-best_words = []
 
 get_words(flat_sides)
 num_letters = len(flat_sides)
@@ -42,9 +37,7 @@ def get_used(word):
     return used
 
 
-def find_best_first_word(starting_letter, first_word_coverage):
-    global max_used
-    global best_words
+def find_best_first_word(starting_letter, first_word_coverage, max_used, best_words, available_words):
 
     first_letter = starting_letter
     for word in word_list:
@@ -56,17 +49,26 @@ def find_best_first_word(starting_letter, first_word_coverage):
 
     for word in available_words:
         num_used = len(get_used(word))
-        if num_used == first_word_coverage: ##changed from num_used > max_used
-            #best_words = []
-            max_used = num_used
-            best_words.append(word)
-        # elif num_used == max_used:
-        #     best_words.append(word)
+        if first_word_coverage == 0:
+            if num_used > max_used:
+                best_words = []
+                max_used = num_used
+                best_words.append(word)
+            elif num_used == max_used:
+                best_words.append(word)
+        else:
+            if num_used == first_word_coverage:
+                max_used = num_used
+                best_words.append(word)
+
+    return available_words, best_words, max_used
+    
 
 def find_next_word(prev_word, cur_used):
     best_words = []
     available_words = []
-    num_cur_used = len(cur_used)
+
+    max_leftover_letters_used = 0
     
     first_letter = prev_word[-1]
     for word in word_list:
@@ -76,55 +78,67 @@ def find_next_word(prev_word, cur_used):
             available_words.append(word)
         
     for word in available_words:
-        num_used = len(get_used(word+prev_word))
-        if num_used > num_cur_used:
+        letters_used = get_used(word)
+        new_letters_used_count = 0
+        for letter in letters_used:
+            if letter not in cur_used:
+                new_letters_used_count+=1
+        if new_letters_used_count > max_leftover_letters_used:
             best_words = []
-            num_cur_used = num_used
+            max_leftover_letters_used = new_letters_used_count
             best_words.append(word)
-        elif num_used == num_cur_used:
+        elif new_letters_used_count == max_leftover_letters_used:
             best_words.append(word)
     return best_words
 
+def chain_words(chains, num_words, word, all_used_letters, full_solution):
+
+    if len(all_used_letters) == num_letters:
+        print("Hurray! This is a complete solution.")
+        solutions.append(full_solution)
+        return True
+    elif chains == num_words:
+        return False
+    else:
+        used_letters = get_used(word) #running again nbut doesnt really matter
+        next_solutions = find_next_word(word, used_letters)
+        #print(f"For word {word}, the next solutions are {next_solutions}")
+        for next in next_solutions:
+            total = get_used("".join(full_solution + [next]))
+            #print(f"    solution {full_solution + [next]} uses {len(total)} / {num_letters}")
+            all_used_letters = total
+            chain_words(chains, num_words+1, next, all_used_letters, full_solution + [next])
+
 def try_solution(first_word_coverage, num_words_in_solution):
+    max_used = first_word_coverage
+    best_words = []
+    available_words = []
+    
     for letter in flat_sides:
-        find_best_first_word(letter, first_word_coverage)
+        available_words, best_words, max_used = find_best_first_word(letter, first_word_coverage, max_used, best_words, available_words)
 
-
+    best_words = list(dict.fromkeys(best_words))
     print(f"{best_words} all use a maximum of {max_used} / {num_letters}.")
 
     for word in best_words:
-        for i in range(num_words_in_solution-1):    
-            used = max_used
-            used_letters = get_used(word) #running again nbut doesnt really matter
-            next_solutions = find_next_word(word, used_letters)
-            print(f"For word {word}, the next solutions are {next_solutions}")
-            for next in next_solutions:
-                total = get_used(word+next)
-                print(f"    solution {word}, {next} uses {len(total)} / {num_letters}")
-                if total == num_letters:
-                    print("Hurray! This is a complete solution.")
-                    return True
-                else:
-                    #TODO: need to make sure can do a third word
+       full_solution = []
+       full_solution.append(word)
+       all_used_letters = get_used(word)
+       chain_words(num_words_in_solution, 1, word, all_used_letters, full_solution)
+
     print("Not a complete solution. Restarting...")
-    return False
+    return False, max_used
 
+success, max_coverage_available_first_word = try_solution(0, 3)
 
-max_available = 8
-i = max_available
+i = max_coverage_available_first_word - 1
 
-while i >= 3:
-    success = try_solution(i, 2)
+while i >= 2:
+    success, extra = try_solution(i, 3)
     if not success:
-        i - 1
-    else:
-        exit()
+        i = i - 1
+    else: 
+        break
 
-print("No success with 2 words. Attempting 3...")
-
-while i >= 3:
-    success = try_solution(i, 3)
-    if not success:
-        i - 1
-    else:
-        exit()
+solutions = sorted(solutions, key=len)
+print(f"All complete solutions with up to {3} words are: {solutions}")
