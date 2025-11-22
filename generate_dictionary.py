@@ -1,7 +1,7 @@
 from wordfreq import zipf_frequency
 from wordfreq import top_n_list
 
-words = top_n_list("en", 80000)  # or however big
+words = top_n_list("en", 80000)
 word_list = [w for w in words if zipf_frequency(w, "en") >= 2.0]
 
 def get_words(available_letters):
